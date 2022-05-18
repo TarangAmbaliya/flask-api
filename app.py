@@ -1,11 +1,11 @@
 import os
 from flask import Flask, jsonify, request
-from flask_restful import Resource, reqparse, Api
+from flask_restful import Resource, Api
 from flask_sqlalchemy import SQLAlchemy
 from flask_marshmallow import Marshmallow
 from flask_jwt_extended import create_access_token, jwt_required, JWTManager
 from werkzeug.security import generate_password_hash, check_password_hash
-
+from sqlalchemy import exc
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URI')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -16,28 +16,23 @@ ma = Marshmallow(app)
 api = Api(app)
 jwt = JWTManager(app)
 
-parser = reqparse.RequestParser()
-parser.add_argument('name', type=str, required=True, help='Username cannot be empty.')
-parser.add_argument('email', type=str, required=False, help='Email is not mandatory.')
-parser.add_argument('password', type=str, required=True, help='Password cannot be empty.')
-
 
 class User(db.Model):
     __tablename__ = 'UserData'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String, unique=True, nullable=False)
     email = db.Column(db.String, unique=True, nullable=False)
-    password_hash = db.Column(db.String, unique=True, nullable=False)
+    password = db.Column(db.String, unique=True, nullable=False)
 
     def __init__(self, name, email, password):
         self.name = name
         self.email = email
-        self.password_hash = generate_password_hash(password, "sha256")
+        self.password = generate_password_hash(password, "sha256")
 
 
-class UserSchema(ma.Schema):
-    fields = ('id', 'username', 'email', 'password')
-    model = User
+class UserSchema(ma.SQLAlchemyAutoSchema):
+    class Meta:
+        model = User
 
 
 user_schema = UserSchema()
@@ -47,39 +42,40 @@ users_schema = UserSchema(many=True)
 class UserRegister(Resource):
 
     def post(self):
-        data = parser.parse_args()
+        data = request.get_json()
+        data = user_schema.load(data)
         name = data['name']
         email = data['email']
         password = data['password']
 
-        # user = User.query.filter_by(name=name).one_or_none()
-        # user_email = User.query.filter_by(email=email).one_or_none()
-
-        # if not user or not user_email:
-            # return jsonify({'message': 'Username or email already exists.'})
-        #
-        # if len(name) or len(password) == 0:
-        #     return jsonify({'message': 'Invalid Data'})
+        if not name or not email or not password:
+            return jsonify({'message': 'Invalid Data'})
 
         user = User(name, email, password)
         db.session.add(user)
-        db.session.commit()
-        token = create_access_token(identity=name)
+
+        try:
+            db.session.commit()
+        except exc.IntegrityError:
+            return jsonify({'message': 'A account with this name or email already exist'})
+
+        token = create_access_token(identity=name, expires_delta=False)
         return jsonify(token)
 
 
 class UserGetToken(Resource):
 
     def get(self):
-        data = parser.parse_args()
+        data = request.get_json()
+        data = user_schema.load(data)
         name = data['name']
         password = data['password']
 
         if not User.query.filter_by(name=name).one_or_none():
             return jsonify({'message': 'No User found.'})
 
-        user = User.query.filter_by(name=name).one_or_more()
-        if check_password_hash(user.password_hash, password):
+        user = User.query.filter_by(name=name).one_or_none()
+        if check_password_hash(user.password, password):
             token = create_access_token(identity=name)
             return jsonify(token)
         else:
@@ -90,7 +86,8 @@ class UserUD(Resource):
 
     @jwt_required()
     def patch(self):
-        data = parser.parse_args()
+        data = request.get_json()
+        data = user_schema.load(data)
         name = data['name']
         email = data['email']
         password = data['password']
@@ -102,14 +99,15 @@ class UserUD(Resource):
             if email in data.keys():
                 user.email = email
             if password in data.keys():
-                user.password_hash = generate_password_hash(password)
+                user.password = generate_password_hash(password)
             db.session.commit()
         else:
             return jsonify({'message': 'No data provided to update.'})
 
     @jwt_required()
     def delete(self):
-        data = parser.parse_args()
+        data = request.get_json()
+        data = user_schema.load(data)
         name = data['name']
         email = data['email']
 
@@ -119,9 +117,18 @@ class UserUD(Resource):
             db.session.commit()
 
 
+class GetAllUsers(Resource):
+
+    @jwt_required()
+    def get(self):
+        get_user_list = User.query.all()
+        return users_schema.dump(get_user_list, many=True)
+
+
 db.create_all()
 api.add_resource(UserRegister, "/api/register")
 api.add_resource(UserGetToken, "/api/gettoken")
 api.add_resource(UserUD, "/api/update")
+api.add_resource(GetAllUsers, '/api/getallusers')
 if __name__ == '__main__':
     app.run(Debug=True)
