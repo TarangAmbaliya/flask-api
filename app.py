@@ -6,6 +6,7 @@ from flask_marshmallow import Marshmallow
 from flask_jwt_extended import create_access_token, jwt_required, JWTManager
 from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy import exc
+
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URI')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -18,6 +19,7 @@ jwt = JWTManager(app)
 
 
 class User(db.Model):
+
     __tablename__ = 'UserData'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String, unique=True, nullable=False)
@@ -28,6 +30,9 @@ class User(db.Model):
         self.name = name
         self.email = email
         self.password = generate_password_hash(password, "sha256")
+
+    def __repr__(self):
+        return jsonify({"User": self.name})
 
 
 class UserSchema(ma.SQLAlchemyAutoSchema):
@@ -42,8 +47,7 @@ users_schema = UserSchema(many=True)
 class UserRegister(Resource):
 
     def post(self):
-        data = request.get_json()
-        data = user_schema.load(data)
+        data = user_schema.load(request.get_json())
         name = data['name']
         email = data['email']
         password = data['password']
@@ -57,17 +61,16 @@ class UserRegister(Resource):
         try:
             db.session.commit()
         except exc.IntegrityError:
-            return jsonify({'message': 'A account with this name or email already exist'})
+            return {'message': 'A account with this name or email already exist'}, 403
 
         token = create_access_token(identity=name, expires_delta=False)
-        return jsonify(token)
+        return jsonify({'Auth Token': token})
 
 
 class UserGetToken(Resource):
 
     def get(self):
-        data = request.get_json()
-        data = user_schema.load(data)
+        data = user_schema.load(request.get_json(), partial=True)
         name = data['name']
         password = data['password']
 
@@ -86,8 +89,7 @@ class UserUD(Resource):
 
     @jwt_required()
     def patch(self):
-        data = request.get_json()
-        data = user_schema.load(data)
+        data = user_schema.load(request.get_json())
         name = data['name']
         email = data['email']
         password = data['password']
@@ -121,7 +123,8 @@ class GetAllUsers(Resource):
 
     @jwt_required()
     def get(self):
-        get_user_list = User.query.all()
+        data = user_schema.load(request.get_json(), partial=True)
+        get_user_list = User.query.with_entities(User.name, User.email).filter_by(name=data['name'])
         return users_schema.dump(get_user_list, many=True)
 
 
@@ -130,5 +133,6 @@ api.add_resource(UserRegister, "/api/register")
 api.add_resource(UserGetToken, "/api/gettoken")
 api.add_resource(UserUD, "/api/update")
 api.add_resource(GetAllUsers, '/api/getallusers')
+
 if __name__ == '__main__':
     app.run(Debug=True)
