@@ -6,7 +6,7 @@ from flask_marshmallow import Marshmallow
 from flask_jwt_extended import create_access_token, jwt_required, JWTManager
 from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy import exc
-from marshmallow import EXCLUDE
+from marshmallow import EXCLUDE, ValidationError
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URI')
@@ -50,13 +50,13 @@ users_schema = UserSchema(many=True, unknown=EXCLUDE)
 class UserRegister(Resource):
 
     def post(self):
-        data = user_schema.load(request.get_json())
+        try:
+            data = user_schema.load(request.get_json())
+        except ValidationError:
+            return jsonify({'message': 'Partial input detected.'})
         name = data['name']
         email = data['email']
         password = data['password']
-
-        if not name or not email or not password:
-            return jsonify({'message': 'Invalid Data'})
 
         user = User(name, email, password)
         db.session.add(user)
@@ -83,7 +83,7 @@ class UserGetToken(Resource):
         user = User.query.filter_by(name=name).one_or_none()
         if check_password_hash(user.password, password):
             token = create_access_token(identity=name)
-            return jsonify(token)
+            return jsonify({'Auth Token': token})
         else:
             return jsonify({'message': 'Incorrect Password'})
 
@@ -127,7 +127,13 @@ class GetAllUsers(Resource):
     @jwt_required()
     def get(self):
         data = user_schema.load(request.get_json(), partial=True)
-        get_user_list = User.query.with_entities(User.name, User.email).filter_by(name=data['name'])
+        if len(data) == 0:
+            get_user_list = User.query.all()
+        else:
+            try:
+                get_user_list = User.query.with_entities(User.name, User.email).filter_by(name=data['name'])
+            except KeyError:
+                return jsonify({'message': 'Need name to get user info'})
         return users_schema.dump(get_user_list, many=True)
 
 
