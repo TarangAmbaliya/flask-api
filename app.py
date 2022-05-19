@@ -6,6 +6,7 @@ from flask_marshmallow import Marshmallow
 from flask_jwt_extended import create_access_token, jwt_required, JWTManager
 from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy import exc
+from marshmallow import EXCLUDE
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URI')
@@ -38,10 +39,12 @@ class User(db.Model):
 class UserSchema(ma.SQLAlchemyAutoSchema):
     class Meta:
         model = User
+        ordered = True
+        unknown = EXCLUDE
 
 
-user_schema = UserSchema()
-users_schema = UserSchema(many=True)
+user_schema = UserSchema(unknown=EXCLUDE)
+users_schema = UserSchema(many=True, unknown=EXCLUDE)
 
 
 class UserRegister(Resource):
