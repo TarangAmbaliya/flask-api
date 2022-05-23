@@ -3,9 +3,7 @@ services:
     container_name: USER-CRUD
     build: .
     ports:
-      - "127.0.0.1:80:5000"
-    environment:
-      - DATABASE_URI=postgresql://postgres:postgres@127.0.0.1:5432/usr
+      - "80:5000"
     depends_on:
       - postgre-db
 
@@ -13,7 +11,7 @@ services:
     container_name: DATABASE
     image: postgres:latest
     ports:
-      - "127.0.0.1:5432:5432"
+      - "5432:5432"
     environment:
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_USER=postgres
