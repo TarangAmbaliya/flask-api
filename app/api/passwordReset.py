@@ -1,28 +1,21 @@
-from app.models import User
-from app.schema import UserSchema
-from app.models import db, generate_password_hash
-from flask import request, jsonify
-from flask_jwt_extended import jwt_required
-from flask_restful import Resource
+from app.models.user import User, db, generate_password_hash
+from app.schema.userSchema import UserSchema
+from app.api.login import Resource
+from app.api.userRegister import request, jsonify
+from flask_jwt_extended import jwt_required, get_jwt_identity
 
 
 @jwt_required(fresh=True)
 class ResetPassword(Resource):
     def patch(self):
-        data = UserSchema().load(request.get_json(), partial=True)
-        name = data['name']
-        email = data['email']
-        password = data['password']
-
-        if len(name) > 0 or len(email) > 0 or len(password) > 8:
-            user = User.query.filter_by(name=name).one_or_none()
-            if password not in data.keys():
-                return jsonify({'message': 'No password provided to reset.'})
-            elif password == user.password:
-                return jsonify({'message': 'The password cannot be as same as the previous password.'})
-            else:
-                user.password = generate_password_hash(password)
-                db.session.commit()
-                return jsonify({'message': 'Password reset successfull.'})
+        name = get_jwt_identity()
+        data = UserSchema().load(request.get_json())
+        if 'password' not in data.keys():
+            return jsonify({'message': 'No new password provided'})
         else:
-            return jsonify({'message': 'Invalid Password.'})
+            user = User.Query.filter_by(name=name).first()
+
+        user.password = generate_password_hash(data['password'])
+        db.session.commit()
+
+        return jsonify({'message': 'Password reset successful'})
