@@ -5,6 +5,7 @@ from werkzeug.security import generate_password_hash
 from app.models import db
 from app.models.user import User
 from app.schema.userSchema import UserSchema
+from app.auth.twofactor import Otp
 
 
 class ResetPassword(Resource):

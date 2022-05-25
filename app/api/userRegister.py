@@ -34,5 +34,5 @@ class UserRegister(Resource):
         token = create_access_token(identity=name)
         mail = list()
         mail.append(data['email'])
-        Email(recipients=mail).send_welcome_email()
+        Email(recipients=mail, name=data['name']).send_email()
         return jsonify({'Auth Token': token})
