@@ -1,9 +1,9 @@
-from app.models.user import User
-from app.api.userRegister import request, jsonify
-from app.api.userRegister import Resource
-from app.api.userRegister import create_access_token
+from flask import request, jsonify
+from flask_restful import Resource
+from flask_jwt_extended import create_access_token
 from datetime import timedelta
 from werkzeug.security import check_password_hash
+from app.models.user import User
 
 
 class UserLogin(Resource):

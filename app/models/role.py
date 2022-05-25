@@ -1,4 +1,4 @@
-from app.models.user import db
+from app.models import db
 
 
 class Role(db.model):

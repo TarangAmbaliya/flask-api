@@ -1,11 +1,12 @@
-from app.schema.userSchema import UserSchema
-from app.models.user import User, db
-from app.mail.welcomeEmail import Email
 from flask import request, jsonify
 from flask_restful import Resource
 from flask_jwt_extended import create_access_token
 from marshmallow import ValidationError
 from sqlalchemy.exc import IntegrityError
+from app.models import db
+from app.models.user import User
+from app.schema.userSchema import UserSchema
+from app.mail.sendEmail import Email
 
 
 class UserRegister(Resource):
@@ -31,5 +32,7 @@ class UserRegister(Resource):
             return jsonify({'message': 'A account with this name or email already exists.'})
 
         token = create_access_token(identity=name)
-        Email.send_email()
+        mail = list()
+        mail.append(data['email'])
+        Email(recipients=mail).send_welcome_email()
         return jsonify({'Auth Token': token})

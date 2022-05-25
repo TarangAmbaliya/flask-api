@@ -1,12 +1,15 @@
-from app.models.user import User, db, generate_password_hash
-from app.schema.userSchema import UserSchema
-from app.api.login import Resource
-from app.api.userRegister import request, jsonify
+from flask import request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask_restful import Resource
+from werkzeug.security import generate_password_hash
+from app.models import db
+from app.models.user import User
+from app.schema.userSchema import UserSchema
 
 
-@jwt_required(fresh=True)
 class ResetPassword(Resource):
+
+    @jwt_required(fresh=True)
     def patch(self):
         name = get_jwt_identity()
         data = UserSchema().load(request.get_json())
