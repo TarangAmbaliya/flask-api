@@ -14,7 +14,7 @@ class SubmitOtp(Resource):
         otp = data['otp']
 
         user = User.query.filter_by(email=email).first()
-        if otp == UserLogin().get().create_otp:
+        if int(otp) == UserLogin.create_otp:
             if 'remember_me' in data.keys():
                 token = create_access_token(identity=user.name, fresh=False, expires_delta=False)
                 return jsonify({'Auth Token': token})
@@ -22,4 +22,4 @@ class SubmitOtp(Resource):
                 token = create_access_token(identity=user.name, fresh=True, expires_delta=(timedelta(days=1)))
                 return jsonify({'Auth Token': token})
         else:
-            return jsonify({'message': 'Incorrect OTP'})
+            return jsonify(UserLogin.create_otp)
