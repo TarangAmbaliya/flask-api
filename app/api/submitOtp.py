@@ -22,4 +22,4 @@ class SubmitOtp(Resource):
                 token = create_access_token(identity=user.name, fresh=True, expires_delta=(timedelta(days=1)))
                 return jsonify({'Auth Token': token})
         else:
-            return jsonify(UserLogin.create_otp)
+            return jsonify({'message': 'Incorrect OTP'})
