@@ -5,19 +5,18 @@ from werkzeug.security import generate_password_hash
 from app.models import db
 from app.models.user import User
 from app.schema.userSchema import UserSchema
-from app.auth.twofactor import Otp
 
 
 class ResetPassword(Resource):
 
-    @jwt_required(fresh=True)
+    @jwt_required(refresh=True)
     def patch(self):
         name = get_jwt_identity()
-        data = UserSchema().load(request.get_json())
+        data = UserSchema().load(request.get_json(), partial=True)
         if 'password' not in data.keys():
             return jsonify({'message': 'No new password provided'})
         else:
-            user = User.Query.filter_by(name=name).first()
+            user = User.query.filter_by(name=name).first()
 
         user.password = generate_password_hash(data['password'])
         db.session.commit()

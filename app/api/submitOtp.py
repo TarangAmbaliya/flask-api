@@ -14,9 +14,9 @@ class SubmitOtp(Resource):
         otp = data['otp']
 
         user = User.query.filter_by(email=email).first()
-        if int(otp) == UserLogin.create_otp:
+        if UserLogin.otp.verify_otp(otp=otp, email=email):
             if 'remember_me' in data.keys():
-                token = create_access_token(identity=user.name, fresh=False, expires_delta=False)
+                token = create_access_token(identity=user.name, fresh=True, expires_delta=(timedelta(days=10)))
                 return jsonify({'Auth Token': token})
             else:
                 token = create_access_token(identity=user.name, fresh=True, expires_delta=(timedelta(days=1)))

@@ -6,7 +6,7 @@ from flask import jsonify
 
 class GetRefreshToken(Resource):
 
-    @jwt_required()
+    @jwt_required(refresh=False)
     def get(self):
-        return jsonify(create_refresh_token(identity=(get_jwt_identity()),
-                                            expires_delta=(timedelta(seconds=600))))
+        return jsonify({'Refresh Token': create_refresh_token(identity=(get_jwt_identity()),
+                                                              expires_delta=(timedelta(seconds=300)))})

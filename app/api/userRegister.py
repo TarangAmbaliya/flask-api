@@ -20,7 +20,7 @@ class UserRegister(Resource):
         email = data['email']
         password = data['password']
 
-        if len(password) > 8:
+        if len(password) >= 8:
             user = User(name, email, password)
             db.session.add(user)
         else:

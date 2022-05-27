@@ -3,15 +3,17 @@ from random import randint
 
 class Otp:
 
-    otp = randint(1111, 9999)
+    def __init__(self):
+        self.otp = randint(1111, 9999)
+        self.email = ''
 
-    @classmethod
-    def generate_otp(cls):
-        return cls.otp
+    def generate_otp(self, email):
+        self.email = email
+        return self.otp
 
-    @classmethod
-    def verify_otp(cls, user_otp: int):
-        if cls.otp == user_otp:
-            return True
-        else:
-            return False
+    def verify_otp(self, otp, email):
+        if email == self.email:
+            if int(otp) == self.otp:
+                return True
+            else:
+                return False
